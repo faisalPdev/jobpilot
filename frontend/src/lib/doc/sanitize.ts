@@ -1015,6 +1015,56 @@ export function sanitizeDocumentHtml(html: string, options: { paste?: boolean } 
 }
 
 /**
+ * Bakes the paste's `<style>` rules onto the elements they match, then hands
+ * back the body HTML.
+ *
+ * A schema-based editor filters what it is given, but its parser never resolves
+ * CSS classes — and Word puts almost everything in a `<style>` block keyed by
+ * `class=MsoNormal`, so without this step a Word paste arrives as bare tags
+ * with its spacing and indent already gone.
+ */
+export function resolveEmbeddedStyles(html: string): string {
+  if (!hasDom()) return html
+  const looksComplete = /<html[\s>]|<body[\s>]/i.test(html)
+  const parsed = new DOMParser().parseFromString(
+    looksComplete ? html : '<body>' + html + '</body>',
+    'text/html',
+  )
+  applyEmbeddedStyles(parsed.body)
+  normalizeLogicalProperties(parsed.body)
+  return parsed.body.innerHTML
+}
+
+/**
+ * Everything the editor hands to ProseMirror on a paste.
+ *
+ * Two jobs, in order. Resolve the source's `<style>` block, or Word's spacing
+ * and indent never arrive at all. Then remove the typography the schema *does*
+ * declare — font family and size — because those are declared for the ribbon's
+ * benefit, not the clipboard's: kept, they would pin pasted text to Calibri
+ * 11pt and Arial 20.5pt and put it beyond the page's font controls, which is
+ * the bug this whole approach exists to end. Leading needs no handling here;
+ * the schema has no line-height attribute, so it cannot survive the parse.
+ */
+export function preparePastedHtml(html: string): string {
+  if (!hasDom()) return html
+  const resolved = resolveEmbeddedStyles(html)
+  const parsed = new DOMParser().parseFromString('<body>' + resolved + '</body>', 'text/html')
+  for (const el of Array.from(parsed.body.querySelectorAll('[style]'))) {
+    const map = readStyleMap(el.getAttribute('style') ?? '')
+    let changed = false
+    for (const prop of ['font-family', 'font-size', 'line-height']) {
+      if (map.delete(prop)) changed = true
+    }
+    if (!changed) continue
+    const next = writeStyleMap(map)
+    if (next) el.setAttribute('style', next)
+    else el.removeAttribute('style')
+  }
+  return parsed.body.innerHTML
+}
+
+/**
  * Clears spacing a paste baked into stored content, so the page's Line spacing
  * and margins govern the whole document again. Unlike the paste-time pass this
  * also drops paragraph gaps, which is the point: it is the user saying they

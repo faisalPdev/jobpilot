@@ -32,7 +32,10 @@ import { Tabs } from '@/components/ui/data'
 import { ResumePreview } from '@/components/resume/ResumePreview'
 import { AtsPanel, ScorePanel, TemplatePicker } from '@/components/resume/ScorePanel'
 import { VersionHistory } from '@/components/resume/VersionHistory'
-import { DocumentEditor, type DocumentEditorHandle } from '@/components/resume/DocumentEditor'
+import {
+  DocumentEditorTipTap as DocumentEditor,
+  type DocumentEditorHandle,
+} from '@/components/resume/DocumentEditorTipTap'
 import {
   DocumentChecks,
   DocumentOutline,

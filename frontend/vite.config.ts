@@ -9,10 +9,14 @@ export default defineConfig({
       output: {
         // Charts and drag-and-drop are heavy and change rarely — splitting them
         // keeps the app chunk small enough to stay cacheable between deploys.
-        manualChunks: {
-          react: ['react', 'react-dom', 'react-router-dom'],
-          charts: ['recharts'],
-          dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/modifiers', '@dnd-kit/utilities'],
+        // Matched by id rather than package name because @tiptap/pm exposes
+        // subpaths only, so naming it as an entry fails to resolve.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (/node_modules[\/](@tiptap|prosemirror-)/.test(id)) return 'editor'
+          if (/node_modules[\/](react|react-dom|react-router|react-router-dom)[\/]/.test(id)) return 'react'
+          if (/node_modules[\/]recharts[\/]/.test(id)) return 'charts'
+          if (/node_modules[\/]@dnd-kit[\/]/.test(id)) return 'dnd'
         },
       },
     },
