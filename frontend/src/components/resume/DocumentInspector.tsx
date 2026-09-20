@@ -1,6 +1,12 @@
 import type { DocumentPage, PageSize, ResumeDocument } from '@/types'
 import type { DocumentReport } from '@/lib/doc/checks'
-import { MARGIN_PRESETS, LINE_SPACING_PRESETS, PAGE_SIZES } from '@/lib/doc/render'
+import {
+  MARGIN_PRESETS,
+  LINE_SPACING_PRESETS,
+  PARAGRAPH_SPACING_PRESETS,
+  PAGE_SIZES,
+  paragraphSpacing,
+} from '@/lib/doc/render'
 import { DOC_FONTS, countInlineSpacing, resetDocumentSpacing } from '@/lib/doc/sanitize'
 import { FONT_SIZES } from './DocumentToolbar'
 import { cn } from '@/lib/utils'
@@ -266,7 +272,7 @@ export function DocumentPageSetup({
 
       <Field
         label="Line spacing"
-        hint="Applies to the whole page. Use Single for dense one-pagers, Relaxed when a reader needs air."
+        hint="Space between lines *inside* a paragraph. A paste that made every line its own paragraph has nothing for this to act on — use Paragraph spacing below."
       >
         <div className="space-y-2">
           <select
@@ -310,17 +316,63 @@ export function DocumentPageSetup({
         </div>
       </Field>
 
+      <Field
+        label="Paragraph spacing"
+        hint="Space between one paragraph and the next. This is the one that moves a pasted document, where each line is usually its own paragraph."
+      >
+        <div className="space-y-2">
+          <select
+            className="input-base"
+            value={
+              PARAGRAPH_SPACING_PRESETS.some((p) => p.value === paragraphSpacing(doc.page))
+                ? String(paragraphSpacing(doc.page))
+                : 'custom'
+            }
+            onChange={(e) => {
+              if (e.target.value === 'custom') return
+              set({ paragraph_spacing: Number(e.target.value) })
+            }}
+          >
+            {PARAGRAPH_SPACING_PRESETS.map((preset) => (
+              <option key={preset.value} value={preset.value}>
+                {preset.label} ({preset.value})
+              </option>
+            ))}
+            {!PARAGRAPH_SPACING_PRESETS.some((p) => p.value === paragraphSpacing(doc.page)) && (
+              <option value="custom">Custom ({paragraphSpacing(doc.page)})</option>
+            )}
+          </select>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              max={3}
+              step={0.05}
+              className="input-base w-24 tabular-nums"
+              value={paragraphSpacing(doc.page)}
+              onChange={(e) => {
+                const n = Number(e.target.value)
+                if (!Number.isFinite(n)) return
+                set({ paragraph_spacing: Math.min(3, Math.max(0, Math.round(n * 100) / 100)) })
+              }}
+              aria-label="Custom paragraph spacing"
+            />
+            <span className="text-xs text-ink-500">× body size</span>
+          </div>
+        </div>
+      </Field>
+
       {baked.total > 0 && (
         <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
           <p className="text-xs text-ink-700">
             <b>
               {baked.line_height > 0
-                ? 'Line spacing above is not reaching the whole document.'
-                : 'Paragraph gaps above are not reaching the whole document.'}
+                ? 'The spacing controls above are not reaching the whole document.'
+                : 'Paragraph spacing above is not reaching the whole document.'}
             </b>{' '}
             {baked.total} {baked.total === 1 ? 'block carries' : 'blocks carry'} spacing of their own, pasted in
             from Word or Google Docs. Spacing set directly on a block always wins over the page defaults, so
-            those blocks ignore the controls above.
+            those blocks keep their own gaps whatever you choose above.
           </p>
           <Button
             type="button"

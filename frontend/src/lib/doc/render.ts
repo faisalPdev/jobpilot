@@ -47,6 +47,31 @@ export const LINE_SPACING_PRESETS = [
   { label: 'Double', value: 2 },
 ]
 
+/**
+ * Multipliers applied as the bottom margin of a paragraph.
+ *
+ * Line spacing and paragraph spacing are different things and a document needs
+ * both: line spacing is the leading inside a paragraph, and has nothing to act
+ * on when a paste produced one paragraph per line — which is what Google Docs
+ * does. Then every gap on the page is this value instead.
+ */
+export const PARAGRAPH_SPACING_PRESETS = [
+  { label: 'None', value: 0 },
+  { label: 'Tight', value: 0.25 },
+  { label: 'Normal', value: 0.5 },
+  { label: 'Relaxed', value: 0.85 },
+  { label: 'Loose', value: 1.2 },
+]
+
+/** What `.doc p` used before the setting existed; keeps old documents put. */
+export const DEFAULT_PARAGRAPH_SPACING = 0.5
+
+/** Paragraph spacing for a page, tolerating documents saved without one. */
+export function paragraphSpacing(page: DocumentPage) {
+  const value = page.paragraph_spacing
+  return typeof value === 'number' && Number.isFinite(value) ? value : DEFAULT_PARAGRAPH_SPACING
+}
+
 export function defaultDocumentPage(): DocumentPage {
   return {
     size: 'a4',
@@ -54,6 +79,7 @@ export function defaultDocumentPage(): DocumentPage {
     font_family: DOC_FONTS[1].value,
     font_size_pt: 10.5,
     line_height: 1.45,
+    paragraph_spacing: DEFAULT_PARAGRAPH_SPACING,
   }
 }
 
@@ -84,7 +110,7 @@ export function documentCss(page: DocumentPage) {
     '  word-wrap: break-word;',
     '}',
     '.doc > *:first-child { margin-top: 0; }',
-    '.doc p { margin: 0 0 ' + em(0.5) + '; }',
+    '.doc p { margin: 0 0 ' + em(paragraphSpacing(page)) + '; }',
     '.doc h1 { font-size: ' + em(1.95) + '; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 ' + em(0.15) + '; }',
     '.doc h2 { font-size: ' + em(1.06) + '; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; ' +
       'border-bottom: 1px solid #14161a; padding-bottom: 2px; margin: ' + em(1.05) + ' 0 ' + em(0.45) + '; }',

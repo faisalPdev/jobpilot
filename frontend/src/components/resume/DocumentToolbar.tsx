@@ -2,7 +2,12 @@ import type { ReactNode } from 'react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { DocumentPage } from '@/types'
 import { DOC_FONTS } from '@/lib/doc/sanitize'
-import { MARGIN_PRESETS, LINE_SPACING_PRESETS } from '@/lib/doc/render'
+import {
+  MARGIN_PRESETS,
+  LINE_SPACING_PRESETS,
+  PARAGRAPH_SPACING_PRESETS,
+  paragraphSpacing,
+} from '@/lib/doc/render'
 import { cn } from '@/lib/utils'
 
 /** Sizes the size menu offers. Anything else can still arrive via a paste. */
@@ -286,6 +291,55 @@ export function DocumentToolbar({
             onPageChange?.({
               ...page,
               line_height: Math.min(3, Math.max(0.8, Math.round(n * 100) / 100)),
+            })
+          }}
+        />
+      </div>
+
+      <div
+        className="flex h-7 items-center gap-0.5 rounded-md border border-ink-200 bg-surface pl-1 pr-0.5"
+        title="Space between paragraphs, for the whole page"
+      >
+        <span className="px-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-400">Para</span>
+        <select
+          aria-label="Paragraph spacing preset"
+          className="h-6 max-w-[7rem] border-0 bg-transparent px-0.5 text-xs text-ink-700 outline-none"
+          value={
+            PARAGRAPH_SPACING_PRESETS.some((p) => p.value === paragraphSpacing(page))
+              ? String(paragraphSpacing(page))
+              : 'custom'
+          }
+          onChange={(e) => {
+            if (e.target.value === 'custom') return
+            onPageChange?.({ ...page, paragraph_spacing: Number(e.target.value) })
+          }}
+        >
+          {PARAGRAPH_SPACING_PRESETS.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+          <option value="custom">Custom…</option>
+        </select>
+        <input
+          type="number"
+          min={0}
+          max={3}
+          step={0.05}
+          inputMode="decimal"
+          aria-label="Custom paragraph spacing"
+          title="Custom paragraph spacing"
+          className="h-6 w-12 rounded border-0 bg-ink-50 px-1 text-center text-xs tabular-nums text-ink-800 outline-none focus:ring-1 focus:ring-brand-300"
+          value={paragraphSpacing(page)}
+          onMouseDown={(e) => e.stopPropagation()}
+          onChange={(e) => {
+            const raw = e.target.value
+            if (raw === '') return
+            const n = Number(raw)
+            if (!Number.isFinite(n)) return
+            onPageChange?.({
+              ...page,
+              paragraph_spacing: Math.min(3, Math.max(0, Math.round(n * 100) / 100)),
             })
           }}
         />

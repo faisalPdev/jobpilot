@@ -136,7 +136,14 @@ export interface DocumentPage {
   font_family: string
   /** Body size in points; headings scale off it. */
   font_size_pt: number
+  /** Space between lines *inside* a paragraph, as a multiple of body size. */
   line_height: number
+  /**
+   * Space *between* paragraphs, as a multiple of body size. Optional because
+   * documents saved before this setting existed have no value for it; readers
+   * fall back to DEFAULT_PARAGRAPH_SPACING so those documents do not shift.
+   */
+  paragraph_spacing?: number
 }
 
 export interface ResumeDocument {

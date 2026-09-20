@@ -17,7 +17,13 @@ import { checkAts, scoreResume } from '../src/lib/ai/score'
 import { parseResumeText } from '../src/lib/ai/resumeParse'
 import { draftStarAnswer, generateQuestions, scoreMockAnswer } from '../src/lib/ai/interview'
 import { renderResumeText, renderResumeDocument } from '../src/lib/export/render'
-import { defaultDocumentPage, renderDocumentDocument } from '../src/lib/doc/render'
+import {
+  DEFAULT_PARAGRAPH_SPACING,
+  defaultDocumentPage,
+  documentCss,
+  paragraphSpacing,
+  renderDocumentDocument,
+} from '../src/lib/doc/render'
 import {
   countInlineSpacing,
   documentToText,
@@ -415,7 +421,25 @@ await (async function documentMode() {
   const stored = sanitizeDocumentHtml('<p>Plain</p>')
   check('stored documents are not given a forced alignment', !/text-align/.test(stored), stored)
 
+  // Line spacing is the leading inside a paragraph, so it has nothing to act on
+  // when a paste made every line its own paragraph — which is what Google Docs
+  // does. Paragraph spacing is the control that moves those documents.
   const page = defaultDocumentPage()
+  check('a new page carries the paragraph spacing default',
+    page.paragraph_spacing === DEFAULT_PARAGRAPH_SPACING, String(page.paragraph_spacing))
+  check('paragraph spacing reaches the page stylesheet',
+    documentCss({ ...page, paragraph_spacing: 1.2 }).includes('.doc p { margin: 0 0 1.200em; }'))
+  check('zero paragraph spacing is honoured, not treated as unset',
+    documentCss({ ...page, paragraph_spacing: 0 }).includes('.doc p { margin: 0 0 0.000em; }'))
+  // Documents saved before the setting existed have no value for it and must
+  // render exactly as they did.
+  const { paragraph_spacing: _omitted, ...legacyPage } = page
+  check('a document saved without the setting keeps its old spacing',
+    paragraphSpacing(legacyPage) === DEFAULT_PARAGRAPH_SPACING &&
+      documentCss(legacyPage).includes('.doc p { margin: 0 0 0.500em; }'))
+  check('line spacing is still independent of it',
+    documentCss({ ...page, line_height: 1.15 }).includes('line-height: 1.15;'))
+
   const html = structuredToDocumentHtml(content)
   check('structured profile renders as a page', html.includes(content.contact.full_name), `${html.length} chars`)
   check('sections become headings', html.includes('<h2>Experience</h2>'))
