@@ -288,11 +288,28 @@ function applyEmbeddedStyles(root: HTMLElement) {
     if (collected.length) {
       const existing = node.getAttribute('style') ?? ''
       // Embedded sheet first, inline last — matching normal CSS precedence.
-      node.setAttribute('style', collected.join('; ') + (existing ? '; ' + existing : ''))
+      node.setAttribute('style', joinDeclarations([...collected, existing]))
     }
     for (const child of Array.from(node.children)) walk(child)
   }
   walk(root)
+}
+
+/**
+ * Joins declaration blocks into one style attribute.
+ *
+ * The rules lifted out of a `<style>` block already end in `;`, so concatenating
+ * them with a separator produced `...sans-serif;; text-align: center`. Our own
+ * reader splits on `;` and skips the empty, which is why this went unnoticed —
+ * but a stricter CSS parser stops at the malformed declaration and discards
+ * everything after it, silently losing whatever Word put last.
+ */
+function joinDeclarations(parts: string[]) {
+  return parts
+    .flatMap((part) => part.split(';'))
+    .map((decl) => decl.trim())
+    .filter(Boolean)
+    .join('; ')
 }
 
 /** Promote legacy table/presentational attributes Word still emits into CSS. */

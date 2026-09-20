@@ -377,6 +377,19 @@ await (async function documentMode() {
   check('inline spacing is counted for the warning',
     counted.line_height === 1 && counted.margins === 1, JSON.stringify(counted))
 
+  // A <style> rule already ends in `;`, so appending the inline style used to
+  // produce `;;`. Our reader tolerates it; a real CSS parser stops there and
+  // drops whatever followed — which was Word's alignment.
+  const joined = sanitizeDocumentHtml(
+    '<style>p.MsoNormal { margin-bottom: 8.0pt; }</style>' +
+      '<p class=MsoNormal style="text-align:center">X</p>',
+    { paste: true },
+  )
+  check('style declarations are joined without an empty one',
+    domLess || !/;\s*;/.test(joined), joined)
+  check('a declaration after the join still applies',
+    domLess || /text-align: center/.test(joined), joined)
+
   // Alignment anchoring is paste-only: it must not rewrite a stored document.
   const stored = sanitizeDocumentHtml('<p>Plain</p>')
   check('stored documents are not given a forced alignment', !/text-align/.test(stored), stored)
