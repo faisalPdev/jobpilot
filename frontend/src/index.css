@@ -1,0 +1,349 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * The theme lives entirely in these variables. Tailwind's colour utilities are
+ * bound to them in tailwind.config.js, so switching `.dark` on <html> re-themes
+ * every `bg-ink-50` / `text-ink-900` / `bg-rose-50` in the app at once.
+ *
+ * Channels are space-separated RGB (not hex) so Tailwind's opacity modifiers --
+ * `bg-brand-50/40`, `bg-scrim/60` -- still compose.
+ */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --c-surface: 255 255 255;
+    --c-surface-sunk: 246 247 249;
+    --c-scrim: 24 27 34;
+
+    --c-primary: 31 64 233;
+    --c-primary-hover: 26 50 214;
+    --c-on-primary: 255 255 255;
+
+    --shadow-card: 0 1px 2px 0 rgb(16 24 40 / 0.06), 0 1px 3px 0 rgb(16 24 40 / 0.1);
+    --shadow-pop: 0 12px 32px -8px rgb(16 24 40 / 0.22);
+
+    --c-ink-50: 246 247 249;
+    --c-ink-100: 236 238 242;
+    --c-ink-200: 213 217 226;
+    --c-ink-300: 177 185 201;
+    --c-ink-400: 135 148 171;
+    --c-ink-500: 105 118 145;
+    --c-ink-600: 83 94 118;
+    --c-ink-700: 68 77 96;
+    --c-ink-800: 59 66 81;
+    --c-ink-900: 24 27 34;
+
+    --c-brand-50: 238 244 255;
+    --c-brand-100: 217 229 255;
+    --c-brand-200: 188 209 255;
+    --c-brand-300: 142 178 255;
+    --c-brand-400: 90 135 252;
+    --c-brand-500: 53 95 245;
+    --c-brand-600: 31 64 233;
+    --c-brand-700: 26 50 214;
+    --c-brand-800: 28 44 175;
+    --c-brand-900: 29 44 138;
+
+    --c-rose-50: 255 241 242;
+    --c-rose-100: 255 228 230;
+    --c-rose-200: 254 205 211;
+    --c-rose-300: 253 164 175;
+    --c-rose-400: 251 113 133;
+    --c-rose-500: 244 63 94;
+    --c-rose-600: 225 29 72;
+    --c-rose-700: 190 18 60;
+    --c-rose-800: 159 18 57;
+    --c-rose-900: 136 19 55;
+
+    --c-emerald-50: 236 253 245;
+    --c-emerald-100: 209 250 229;
+    --c-emerald-200: 167 243 208;
+    --c-emerald-300: 110 231 183;
+    --c-emerald-400: 52 211 153;
+    --c-emerald-500: 16 185 129;
+    --c-emerald-600: 5 150 105;
+    --c-emerald-700: 4 120 87;
+    --c-emerald-800: 6 95 70;
+    --c-emerald-900: 6 78 59;
+
+    --c-amber-50: 255 251 235;
+    --c-amber-100: 254 243 199;
+    --c-amber-200: 253 230 138;
+    --c-amber-300: 252 211 77;
+    --c-amber-400: 251 191 36;
+    --c-amber-500: 245 158 11;
+    --c-amber-600: 217 119 6;
+    --c-amber-700: 180 83 9;
+    --c-amber-800: 146 64 14;
+    --c-amber-900: 120 53 15;
+
+    --c-violet-50: 245 243 255;
+    --c-violet-100: 237 233 254;
+    --c-violet-200: 221 214 254;
+    --c-violet-300: 196 181 253;
+    --c-violet-400: 167 139 250;
+    --c-violet-500: 139 92 246;
+    --c-violet-600: 124 58 237;
+    --c-violet-700: 109 40 217;
+    --c-violet-800: 91 33 182;
+    --c-violet-900: 76 29 149;
+
+    /* Chart chrome, mirrored into JS by lib/viz.ts for Recharts. */
+    --chart-surface: #ffffff;
+    --chart-grid: #e1e0d9;
+    --chart-axis: #c3c2b7;
+    --chart-muted: #898781;
+  }
+
+  /**
+   * `.dark` is set on <html> by the theme store -- and by the pre-paint script
+   * in index.html, so a dark-mode user never sees a white flash. `.on-dark`
+   * opts one region into the dark palette while the rest of the page stays
+   * light; it is what keeps the sign-in hero dark in both themes.
+   *
+   * The dark scale is the light scale read backwards, so a shade keeps its
+   * meaning across the flip: 50 is always the quietest surface, 900 always the
+   * loudest text. Mid shades are retuned rather than mirrored, because a focus
+   * ring and a status dot need their chroma in both themes.
+   */
+  .dark,
+  .on-dark {
+    color-scheme: dark;
+
+    --c-surface: 22 26 33;
+    --c-surface-sunk: 18 21 27;
+    --c-scrim: 5 7 10;
+
+    /* Hover deepens rather than lightens here: lightening this blue drops white
+       label text below 4.5:1. */
+    --c-primary: 59 99 236;
+    --c-primary-hover: 47 86 214;
+    --c-on-primary: 255 255 255;
+
+    /* Dark UI reads elevation from a lighter surface rather than from a drop
+       shadow, so these only need to deepen the separation. */
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.3);
+    --shadow-pop: 0 12px 32px -8px rgb(0 0 0 / 0.65);
+
+    --c-ink-50: 14 17 22;
+    --c-ink-100: 26 31 40;
+    --c-ink-200: 39 46 58;
+    --c-ink-300: 58 67 82;
+    --c-ink-400: 125 136 156;
+    --c-ink-500: 148 159 179;
+    --c-ink-600: 174 184 201;
+    --c-ink-700: 199 207 220;
+    --c-ink-800: 222 228 237;
+    --c-ink-900: 242 245 249;
+
+    --c-brand-50: 23 33 62;
+    --c-brand-100: 29 42 79;
+    --c-brand-200: 39 57 105;
+    --c-brand-300: 61 84 155;
+    --c-brand-400: 90 135 252;
+    --c-brand-500: 108 148 255;
+    /* 600 stays saturated: it is the primary button, and white sits on it. */
+    --c-brand-600: 59 99 236;
+    --c-brand-700: 154 181 255;
+    --c-brand-800: 190 209 255;
+    --c-brand-900: 219 230 255;
+
+    --c-rose-50: 61 18 30;
+    --c-rose-100: 79 22 38;
+    --c-rose-200: 109 30 50;
+    --c-rose-300: 155 45 70;
+    --c-rose-400: 232 90 120;
+    --c-rose-500: 244 63 94;
+    --c-rose-600: 251 113 133;
+    --c-rose-700: 253 164 175;
+    --c-rose-800: 254 205 211;
+    --c-rose-900: 255 228 230;
+
+    --c-emerald-50: 6 46 35;
+    --c-emerald-100: 8 60 45;
+    --c-emerald-200: 6 78 59;
+    --c-emerald-300: 15 118 90;
+    --c-emerald-400: 52 211 153;
+    --c-emerald-500: 16 185 129;
+    --c-emerald-600: 52 211 153;
+    --c-emerald-700: 110 231 183;
+    --c-emerald-800: 167 243 208;
+    --c-emerald-900: 209 250 229;
+
+    --c-amber-50: 56 32 4;
+    --c-amber-100: 69 39 5;
+    --c-amber-200: 96 54 8;
+    --c-amber-300: 133 77 14;
+    --c-amber-400: 251 191 36;
+    --c-amber-500: 245 158 11;
+    --c-amber-600: 251 191 36;
+    --c-amber-700: 252 211 77;
+    --c-amber-800: 253 230 138;
+    --c-amber-900: 254 243 199;
+
+    --c-violet-50: 46 16 101;
+    --c-violet-100: 59 20 128;
+    --c-violet-200: 76 29 149;
+    --c-violet-300: 109 40 217;
+    --c-violet-400: 167 139 250;
+    --c-violet-500: 139 92 246;
+    --c-violet-600: 167 139 250;
+    --c-violet-700: 196 181 253;
+    --c-violet-800: 221 214 254;
+    --c-violet-900: 237 233 254;
+
+    --chart-surface: #161a21;
+    --chart-grid: #2b323d;
+    --chart-axis: #3d4553;
+    --chart-muted: #8b95a6;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-50 text-ink-900 antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* Keyboard focus should be obvious; mouse focus should not shout. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-400 ring-offset-1 ring-offset-surface;
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-ink-200 bg-surface shadow-card;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-3 border-b border-ink-100 px-4 py-3;
+  }
+
+  .label {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-ink-500;
+  }
+
+  .input-base {
+    @apply w-full rounded-lg border border-ink-200 bg-surface px-3 py-2 text-sm text-ink-900 placeholder:text-ink-400 disabled:cursor-not-allowed disabled:bg-ink-50;
+  }
+
+  .input-base:focus {
+    @apply border-brand-400 outline-none ring-2 ring-brand-100;
+  }
+
+  /* brand-600 keeps its light-mode saturation so buttons stay solid; link text
+     needs the lighter end of the ramp once the page goes dark. */
+  .link {
+    @apply text-brand-600 underline decoration-brand-200 underline-offset-2 hover:decoration-brand-500;
+  }
+
+  .dark .link,
+  .on-dark .link {
+    @apply text-brand-700;
+  }
+
+  .table-base {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .table-base th {
+    @apply whitespace-nowrap border-b border-ink-200 bg-ink-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-500;
+  }
+
+  .table-base td {
+    @apply border-b border-ink-100 px-3 py-2 align-top;
+  }
+
+  .table-base tbody tr:hover {
+    @apply bg-brand-50/40;
+  }
+
+  /* Constrained bullet editor: bold/italic only, so exports stay ATS-clean. */
+  .rich-bullet {
+    @apply min-h-[1.6rem] w-full rounded-md px-2 py-1 text-sm leading-relaxed outline-none;
+  }
+
+  .rich-bullet:focus {
+    @apply bg-brand-50/60 ring-1 ring-brand-200;
+  }
+
+  .rich-bullet:empty::before {
+    content: attr(data-placeholder);
+    @apply text-ink-400;
+  }
+
+  /* Freeform document mode: the sheet, and the guides that show where the PDF
+     export will break the page. The typography itself is injected at runtime by
+     `documentCss`, so the editor and the export cannot drift apart. */
+  .doc-editable {
+    overflow: visible;
+  }
+
+  .doc-editable:focus {
+    @apply outline-none;
+  }
+
+  .doc-editable [data-empty]::before {
+    content: attr(data-empty);
+    @apply text-ink-400;
+  }
+
+  .doc-guide {
+    @apply pointer-events-none absolute left-0 right-0 border-t border-dashed border-ink-300;
+  }
+
+  .doc-guide span {
+    @apply absolute right-1 top-1 text-[10px] uppercase tracking-wide text-ink-400;
+  }
+
+  .diff-del {
+    @apply bg-rose-50 text-rose-900 line-through decoration-rose-300;
+  }
+
+  .diff-ins {
+    @apply bg-emerald-50 text-emerald-900;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-ink-200;
+  }
+
+  .no-print {
+    @media print {
+      display: none !important;
+    }
+  }
+}
+
+/* The resume preview renders the same markup and CSS the export does, so it
+   needs the document's own typography rather than the app's -- and its own
+   palette. A resume is a printed page: it stays paper-white in dark mode. */
+.resume-preview .resume {
+  transform-origin: top left;
+}
+
+/* Printing is always onto paper, whatever the screen theme is. */
+@media print {
+  .dark {
+    color-scheme: light;
+  }
+}
