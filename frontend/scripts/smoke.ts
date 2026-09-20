@@ -377,6 +377,27 @@ await (async function documentMode() {
   check('inline spacing is counted for the warning',
     counted.line_height === 1 && counted.margins === 1, JSON.stringify(counted))
 
+  // Google Docs stamps `margin-top: 0pt; margin-bottom: 0pt` on every paragraph
+  // it copies. Inline beats the stylesheet, so those zeros cancelled
+  // `.doc p { margin: … }` and welded the paste into one block no page control
+  // could open. Zero means the source set no space — which is exactly when the
+  // document's own spacing should apply.
+  const gdocsGaps = sanitizeDocumentHtml(
+    '<p style="line-height:1.38;margin-top:0pt;margin-bottom:0pt;">One</p>' +
+      '<p style="line-height:1.38;margin-top:12pt;margin-bottom:0pt;">Two</p>',
+    { paste: true },
+  )
+  check('zero paragraph margins are dropped so the page spacing governs',
+    domLess || !/margin-(top|bottom):\s*0/.test(gdocsGaps), gdocsGaps)
+  check('a real paragraph gap is still kept',
+    domLess || /margin-top: 12pt/.test(gdocsGaps), gdocsGaps)
+  // The margin shorthand has to be expanded, not dropped, or a zero top/bottom
+  // takes the left indent with it.
+  const zeroShorthand = sanitizeDocumentHtml('<p style="margin:0pt 0pt 0pt 36pt">X</p>', { paste: true })
+  check('a zero-vertical shorthand keeps its indent',
+    domLess || (/margin-left: 36pt/.test(zeroShorthand) && !/margin-top/.test(zeroShorthand)),
+    zeroShorthand)
+
   // A <style> rule already ends in `;`, so appending the inline style used to
   // produce `;;`. Our reader tolerates it; a real CSS parser stops there and
   // drops whatever followed — which was Word's alignment.

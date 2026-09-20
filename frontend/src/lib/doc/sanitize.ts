@@ -658,16 +658,22 @@ function normalizeLogicalProperties(root: HTMLElement) {
  * 107% of the font's natural line box, which CSS reads as 107% of font-size,
  * landing about a fifth tighter than the document being copied from.
  *
- * Vertical margins are a different case and survive a paste: unlike
- * line-height they carry real structure — the gap before a section heading —
- * and dropping them closes up every section of a pasted resume.
- * `resetDocumentSpacing` clears those too, but only when the user asks.
+ * Vertical margins split two ways. A non-zero one carries real structure — the
+ * gap before a section heading — so it survives a paste; dropping those closes
+ * up every section of a pasted resume. A zero one carries nothing: Google Docs
+ * stamps `margin-top: 0pt; margin-bottom: 0pt` on every paragraph it copies,
+ * and because inline beats the stylesheet that silently cancels
+ * `.doc p { margin: … }`, welding the paste into one block that no page control
+ * can open up. Zero means "the source set no space", which is exactly when the
+ * document's own spacing should apply, so those go.
+ *
+ * `resetDocumentSpacing` drops the non-zero ones too, but only when asked.
  */
-function stripSpacing(root: HTMLElement, options: { margins?: boolean } = {}) {
+function stripSpacing(root: HTMLElement, options: { margins?: 'zero' | 'all' } = {}) {
   for (const el of Array.from(root.querySelectorAll('[style]'))) {
     const map = readStyleMap(el.getAttribute('style') ?? '')
     let changed = map.delete('line-height')
-    if (options.margins && dropVerticalMargins(map)) changed = true
+    if (options.margins && dropVerticalMargins(map, options.margins)) changed = true
     if (!changed) continue
     const next = writeStyleMap(map)
     if (next) el.setAttribute('style', next)
@@ -675,29 +681,44 @@ function stripSpacing(root: HTMLElement, options: { margins?: boolean } = {}) {
   }
 }
 
+/** `0`, `0pt`, `0.0cm` — a length that sets no space, whatever the unit. */
+function isZeroLength(value: string) {
+  return /^-?0(\.0+)?(pt|px|cm|mm|in|em|rem|%)?$/i.test(value.trim())
+}
+
 /**
  * Removes top/bottom margins while keeping the horizontal ones, because those
  * are the indent. The shorthand has to be expanded rather than deleted or a
  * `margin: 0cm 0cm 8pt 36pt` would take a 36pt left indent down with it.
  */
-function dropVerticalMargins(map: Map<string, string>) {
+function dropVerticalMargins(map: Map<string, string>, scope: 'zero' | 'all') {
   let changed = false
   const shorthand = map.get('margin')
   if (shorthand !== undefined) {
-    map.delete('margin')
-    changed = true
     const parts = shorthand.trim().split(/\s+/)
-    if (parts.length >= 1 && parts.length <= 4) {
-      const right = parts[1] ?? parts[0]
-      const left = parts[3] ?? right
-      // Word writes the shorthand first and overrides with longhands after, so
-      // a longhand already in the map was the more specific declaration.
-      if (!map.has('margin-right')) map.set('margin-right', right)
-      if (!map.has('margin-left')) map.set('margin-left', left)
+    const top = parts[0] ?? ''
+    const bottom = parts[2] ?? top
+    if (scope === 'all' || (isZeroLength(top) && isZeroLength(bottom))) {
+      map.delete('margin')
+      changed = true
+      if (parts.length >= 1 && parts.length <= 4) {
+        const right = parts[1] ?? parts[0]
+        const left = parts[3] ?? right
+        // Word writes the shorthand first and overrides with longhands after, so
+        // a longhand already in the map was the more specific declaration.
+        if (!map.has('margin-right')) map.set('margin-right', right)
+        if (!map.has('margin-left')) map.set('margin-left', left)
+      }
     }
   }
-  if (map.delete('margin-top')) changed = true
-  if (map.delete('margin-bottom')) changed = true
+  for (const prop of ['margin-top', 'margin-bottom']) {
+    const value = map.get(prop)
+    if (value === undefined) continue
+    if (scope === 'all' || isZeroLength(value)) {
+      map.delete(prop)
+      changed = true
+    }
+  }
   return changed
 }
 
@@ -982,7 +1003,7 @@ export function sanitizeDocumentHtml(html: string, options: { paste?: boolean } 
   keepEmptyBlocksVisible(parsed.body)
   // Paste only: a stored document's line-height was either typed by the user
   // with the ribbon or already cleaned on its way in.
-  if (options.paste) stripSpacing(parsed.body)
+  if (options.paste) stripSpacing(parsed.body, { margins: 'zero' })
   if (options.paste) anchorBlockAlignment(parsed.body)
   const out: string[] = []
   serialize(parsed.body, out)
@@ -1002,7 +1023,7 @@ export function sanitizeDocumentHtml(html: string, options: { paste?: boolean } 
 export function resetDocumentSpacing(html: string): string {
   if (!hasDom()) return html
   const parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
-  stripSpacing(parsed.body, { margins: true })
+  stripSpacing(parsed.body, { margins: 'all' })
   const out: string[] = []
   serialize(parsed.body, out)
   return out.join('').trim() || '<p><br></p>'
