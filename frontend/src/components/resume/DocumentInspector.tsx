@@ -1,10 +1,10 @@
 import type { DocumentPage, PageSize, ResumeDocument } from '@/types'
 import type { DocumentReport } from '@/lib/doc/checks'
 import { MARGIN_PRESETS, LINE_SPACING_PRESETS, PAGE_SIZES } from '@/lib/doc/render'
-import { DOC_FONTS } from '@/lib/doc/sanitize'
+import { DOC_FONTS, countInlineSpacing, resetDocumentSpacing } from '@/lib/doc/sanitize'
 import { FONT_SIZES } from './DocumentToolbar'
 import { cn } from '@/lib/utils'
-import { Badge, Hint } from '@/components/ui/primitives'
+import { Badge, Button, Hint } from '@/components/ui/primitives'
 import { Field } from '@/components/ui/inputs'
 
 /** Headings, in order, as a clickable table of contents. */
@@ -176,6 +176,7 @@ export function DocumentPageSetup({
   onChange: (doc: ResumeDocument) => void
 }) {
   const set = (patch: Partial<DocumentPage>) => onChange({ ...doc, page: { ...doc.page, ...patch } })
+  const baked = countInlineSpacing(doc.html)
 
   return (
     <div className="space-y-3">
@@ -308,6 +309,33 @@ export function DocumentPageSetup({
           </div>
         </div>
       </Field>
+
+      {baked.total > 0 && (
+        <div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50 p-3">
+          <p className="text-xs text-ink-700">
+            <b>
+              {baked.line_height > 0
+                ? 'Line spacing above is not reaching the whole document.'
+                : 'Paragraph gaps above are not reaching the whole document.'}
+            </b>{' '}
+            {baked.total} {baked.total === 1 ? 'block carries' : 'blocks carry'} spacing of their own, pasted in
+            from Word or Google Docs. Spacing set directly on a block always wins over the page defaults, so
+            those blocks ignore the controls above.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => onChange({ ...doc, html: resetDocumentSpacing(doc.html) })}
+          >
+            Clear pasted spacing
+          </Button>
+          <p className="text-xs text-ink-500">
+            Clears line spacing and paragraph gaps only. Bold, italics, headings, bullets, tables, indents and
+            alignment are untouched, and this is undoable from version history.
+          </p>
+        </div>
+      )}
 
       <Hint>
         These are the document's defaults. Anything you set on a selection with the ribbon overrides them, and

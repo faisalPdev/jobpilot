@@ -18,7 +18,12 @@ import { parseResumeText } from '../src/lib/ai/resumeParse'
 import { draftStarAnswer, generateQuestions, scoreMockAnswer } from '../src/lib/ai/interview'
 import { renderResumeText, renderResumeDocument } from '../src/lib/export/render'
 import { defaultDocumentPage, renderDocumentDocument } from '../src/lib/doc/render'
-import { documentToText, sanitizeDocumentHtml } from '../src/lib/doc/sanitize'
+import {
+  countInlineSpacing,
+  documentToText,
+  resetDocumentSpacing,
+  sanitizeDocumentHtml,
+} from '../src/lib/doc/sanitize'
 import { analyzeDocument } from '../src/lib/doc/checks'
 import { documentToStructured, structuredToDocumentHtml, textToDocumentHtml } from '../src/lib/doc/convert'
 import { sanitizeInlineHtml } from '../src/lib/utils'
@@ -341,6 +346,36 @@ await (async function documentMode() {
   )
   check('list indent survives as a physical property',
     domLess || indented.split('padding-left: 48px').length - 1 === 2, indented.slice(0, 110))
+
+  // Word stamps its own line-height on every paragraph. Inline beats the page
+  // stylesheet by origin, so keeping it means the Line spacing control silently
+  // stops applying to pasted content.
+  const wordPaste = sanitizeDocumentHtml(
+    '<style>p.MsoNormal { margin: 0cm; margin-bottom: 8.0pt; line-height: 107%; }</style>' +
+      '<p class=MsoNormal>Pasted</p>',
+    { paste: true },
+  )
+  check('word line-height is dropped so the page setting governs',
+    domLess || !/line-height/.test(wordPaste), wordPaste)
+  check('word paragraph gap survives the paste',
+    domLess || /margin-bottom: 8\.0pt/.test(wordPaste), wordPaste)
+  // A user who set line spacing with the ribbon keeps it; only pastes are cleaned.
+  const storedSpacing = sanitizeDocumentHtml('<p style="line-height: 2">Mine</p>')
+  check('a stored line-height is left alone',
+    domLess || /line-height: 2/.test(storedSpacing), storedSpacing)
+  // The explicit reset goes further and flattens paragraph gaps too, but indent
+  // is structure and has to survive.
+  const reset = resetDocumentSpacing(
+    '<p style="margin: 0cm 0cm 8.0pt 36.0pt; line-height: 107%">Pasted</p>',
+  )
+  check('reset clears line spacing', domLess || !/line-height/.test(reset), reset)
+  check('reset clears the paragraph gap', domLess || !/margin-bottom/.test(reset), reset)
+  check('reset keeps the left indent', domLess || /margin-left: 36\.0pt/.test(reset), reset)
+  const counted = countInlineSpacing(
+    '<p style="line-height: 107%">a</p><p style="margin-bottom: 8pt">b</p><p style="margin-left: 4pt">c</p>',
+  )
+  check('inline spacing is counted for the warning',
+    counted.line_height === 1 && counted.margins === 1, JSON.stringify(counted))
 
   // Alignment anchoring is paste-only: it must not rewrite a stored document.
   const stored = sanitizeDocumentHtml('<p>Plain</p>')

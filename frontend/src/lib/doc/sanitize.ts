@@ -631,6 +631,60 @@ function normalizeLogicalProperties(root: HTMLElement) {
 }
 
 /**
+ * Spacing Word and Google Docs stamp onto every paragraph they copy.
+ *
+ * `line-height` is the one that fights the document's own Line spacing control.
+ * An inline declaration outranks `.doc { line-height: ... }` by origin rather
+ * than specificity, so no rule `documentCss` can write will ever reach a pasted
+ * paragraph: the setting silently stops applying to exactly the content the
+ * user just added. The value is wrong on arrival anyway — Word's `107%` means
+ * 107% of the font's natural line box, which CSS reads as 107% of font-size,
+ * landing about a fifth tighter than the document being copied from.
+ *
+ * Vertical margins are a different case and survive a paste: unlike
+ * line-height they carry real structure — the gap before a section heading —
+ * and dropping them closes up every section of a pasted resume.
+ * `resetDocumentSpacing` clears those too, but only when the user asks.
+ */
+function stripSpacing(root: HTMLElement, options: { margins?: boolean } = {}) {
+  for (const el of Array.from(root.querySelectorAll('[style]'))) {
+    const map = readStyleMap(el.getAttribute('style') ?? '')
+    let changed = map.delete('line-height')
+    if (options.margins && dropVerticalMargins(map)) changed = true
+    if (!changed) continue
+    const next = writeStyleMap(map)
+    if (next) el.setAttribute('style', next)
+    else el.removeAttribute('style')
+  }
+}
+
+/**
+ * Removes top/bottom margins while keeping the horizontal ones, because those
+ * are the indent. The shorthand has to be expanded rather than deleted or a
+ * `margin: 0cm 0cm 8pt 36pt` would take a 36pt left indent down with it.
+ */
+function dropVerticalMargins(map: Map<string, string>) {
+  let changed = false
+  const shorthand = map.get('margin')
+  if (shorthand !== undefined) {
+    map.delete('margin')
+    changed = true
+    const parts = shorthand.trim().split(/\s+/)
+    if (parts.length >= 1 && parts.length <= 4) {
+      const right = parts[1] ?? parts[0]
+      const left = parts[3] ?? right
+      // Word writes the shorthand first and overrides with longhands after, so
+      // a longhand already in the map was the more specific declaration.
+      if (!map.has('margin-right')) map.set('margin-right', right)
+      if (!map.has('margin-left')) map.set('margin-left', left)
+    }
+  }
+  if (map.delete('margin-top')) changed = true
+  if (map.delete('margin-bottom')) changed = true
+  return changed
+}
+
+/**
  * A block whose only content is an empty inline generates no line box, so it
  * renders at zero height. Google Docs writes every blank line you typed as
  * `<p><span style="…"></span></p>`, which meant a pasted document lost all of
@@ -909,6 +963,9 @@ export function sanitizeDocumentHtml(html: string, options: { paste?: boolean } 
   normalizeLists(parsed.body)
   normalizeTabStops(parsed.body)
   keepEmptyBlocksVisible(parsed.body)
+  // Paste only: a stored document's line-height was either typed by the user
+  // with the ribbon or already cleaned on its way in.
+  if (options.paste) stripSpacing(parsed.body)
   if (options.paste) anchorBlockAlignment(parsed.body)
   const out: string[] = []
   serialize(parsed.body, out)
@@ -917,6 +974,37 @@ export function sanitizeDocumentHtml(html: string, options: { paste?: boolean } 
     .replace(/<p>(\s|&nbsp;)*<\/p>/g, '<p><br></p>')
     .trim()
   return cleaned || '<p><br></p>'
+}
+
+/**
+ * Clears spacing a paste baked into stored content, so the page's Line spacing
+ * and margins govern the whole document again. Unlike the paste-time pass this
+ * also drops paragraph gaps, which is the point: it is the user saying they
+ * want the document's own rhythm rather than the one Word arrived with.
+ */
+export function resetDocumentSpacing(html: string): string {
+  if (!hasDom()) return html
+  const parsed = new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html')
+  stripSpacing(parsed.body, { margins: true })
+  const out: string[] = []
+  serialize(parsed.body, out)
+  return out.join('').trim() || '<p><br></p>'
+}
+
+/**
+ * How many elements carry their own spacing. Used to explain why the page
+ * controls look like they are doing nothing, rather than leaving the user to
+ * work it out.
+ */
+export function countInlineSpacing(html: string) {
+  let line_height = 0
+  let margins = 0
+  for (const match of html.matchAll(/style\s*=\s*"([^"]*)"/gi)) {
+    const style = match[1]
+    if (/(^|;)\s*line-height\s*:/i.test(style)) line_height += 1
+    if (/(^|;)\s*margin(-top|-bottom)?\s*:/i.test(style)) margins += 1
+  }
+  return { line_height, margins, total: line_height + margins }
 }
 
 /** HTML for a Google Docs–style left / right line (company + location, etc.). */
